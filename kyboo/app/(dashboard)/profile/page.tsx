@@ -35,6 +35,7 @@ interface Book {
   status: string | null;
   createdAt: Date | null;
   ownerId: string;
+  ownerUsername?: string;
 }
 
 export default function ProfilePage() {
@@ -47,7 +48,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  
+
   // Book modal state
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -165,24 +166,24 @@ export default function ProfilePage() {
       ...data,
       status: data.status === "disponible" || data.status === "intercambiado" ? data.status : undefined,
     };
-    
+
     const result = await updateBook(bookId, updateData);
-    
+
     if (result.success) {
       setToast({ message: result.message || "Libro actualizado exitosamente", type: "success" });
-      
+
       // Update the book in the local state
       setBooks((prev) =>
         prev.map((book) =>
           book.id === bookId ? { ...book, ...data } : book
         )
       );
-      
+
       // Update selected book
       if (selectedBook?.id === bookId) {
         setSelectedBook({ ...selectedBook, ...data });
       }
-      
+
       setIsModalOpen(false);
     } else {
       setToast({ message: result.error || "Error al actualizar libro", type: "error" });
@@ -331,9 +332,8 @@ export default function ProfilePage() {
                       key={genre}
                       onClick={() => canEdit && togglePreference(genre)}
                       disabled={!canEdit}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        isSelected ? "bg-light-purple text-white" : "bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300"
-                      } ${canEdit ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${isSelected ? "bg-light-purple text-white" : "bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300"
+                        } ${canEdit ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
                     >
                       {genre}
                     </button>

@@ -9,6 +9,7 @@ interface BookCardProps {
   author: string;
   imageUrl: string;
   genres: string[];
+  ownerUsername?: string;
   onClick?: () => void;
 }
 
@@ -16,7 +17,7 @@ interface BookCardProps {
 const isValidImageUrl = (url: string): boolean => {
   try {
     const parsedUrl = new URL(url);
-    
+
     // List of invalid/placeholder domains to exclude
     const invalidDomains = [
       'ejemplo.jpg',
@@ -25,13 +26,13 @@ const isValidImageUrl = (url: string): boolean => {
       'example.jpg',
       'localhost',
     ];
-    
+
     // Check if hostname is in the invalid list or ends with invalid extensions
-    const isInvalidDomain = invalidDomains.some(domain => 
-      parsedUrl.hostname === domain || 
+    const isInvalidDomain = invalidDomains.some(domain =>
+      parsedUrl.hostname === domain ||
       parsedUrl.hostname.endsWith(`.${domain}`)
     );
-    
+
     // Check if it's a proper http/https URL with a valid domain
     return (
       (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") &&
@@ -44,7 +45,7 @@ const isValidImageUrl = (url: string): boolean => {
   }
 };
 
-export function BookCard({ title, author, imageUrl, genres, onClick }: BookCardProps) {
+export function BookCard({ title, author, imageUrl, genres, ownerUsername, onClick }: BookCardProps) {
   const [imageError, setImageError] = useState(false);
   const shouldShowImage = isValidImageUrl(imageUrl) && !imageError;
 
@@ -79,6 +80,15 @@ export function BookCard({ title, author, imageUrl, genres, onClick }: BookCardP
         <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
           {author}
         </p>
+        {ownerUsername && (
+          <a
+            href={`/user/${ownerUsername}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-light-purple dark:text-light-pink hover:underline block"
+          >
+            @{ownerUsername}
+          </a>
+        )}
         {genres.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {genres.slice(0, 2).map((genre, idx) => (

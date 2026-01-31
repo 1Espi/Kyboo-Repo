@@ -13,7 +13,7 @@ interface FeedParams {
 export async function getPersonalizedFeed({ page = 0, limit = 10 }: FeedParams = {}) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user || !user.id) {
       return { success: false, error: "No autorizado", books: [] };
     }
@@ -47,8 +47,10 @@ export async function getPersonalizedFeed({ page = 0, limit = 10 }: FeedParams =
           status: books.status,
           createdAt: books.createdAt,
           ownerId: books.ownerId,
+          ownerUsername: users.username,
         })
         .from(books)
+        .innerJoin(users, eq(books.ownerId, users.id))
         .where(sql`${books.status} = 'disponible'`)
         .orderBy(desc(books.createdAt))
         .limit(limit)
@@ -61,7 +63,7 @@ export async function getPersonalizedFeed({ page = 0, limit = 10 }: FeedParams =
     // Create ARRAY constructor with escaped values
     const escapedPreferences = userPreferences.map(p => p.replace(/'/g, "''"));
     const preferencesArraySQL = `ARRAY[${escapedPreferences.map(p => `'${p}'`).join(',')}]::text[]`;
-    
+
     const matchedBooks = await db
       .select({
         id: books.id,
@@ -75,6 +77,7 @@ export async function getPersonalizedFeed({ page = 0, limit = 10 }: FeedParams =
         status: books.status,
         createdAt: books.createdAt,
         ownerId: books.ownerId,
+        ownerUsername: users.username,
         // Calculate match score (number of overlapping genres)
         matchScore: sql<number>`(
           SELECT COUNT(*)
@@ -83,6 +86,7 @@ export async function getPersonalizedFeed({ page = 0, limit = 10 }: FeedParams =
         )`.as('match_score'),
       })
       .from(books)
+      .innerJoin(users, eq(books.ownerId, users.id))
       .where(
         sql`${books.status} = 'disponible' AND ${books.genres} && ${sql.raw(preferencesArraySQL)}`
       )

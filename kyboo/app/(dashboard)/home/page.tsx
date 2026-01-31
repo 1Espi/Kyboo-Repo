@@ -21,6 +21,7 @@ interface Book {
   status: string | null;
   createdAt: Date | null;
   ownerId: string;
+  ownerUsername?: string;
 }
 
 export default function HomePage() {
@@ -31,7 +32,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const loaderRef = useRef<HTMLDivElement>(null);
-  
+
   // Modal state
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -72,7 +73,7 @@ export default function HomePage() {
     setLoading(true);
     try {
       const result = await getPersonalizedFeed({ page: pageNum, limit: 10 });
-      
+
       if (result.success && result.books) {
         if (pageNum === 0) {
           setBooks(result.books as Book[]);
@@ -115,24 +116,24 @@ export default function HomePage() {
       ...data,
       status: data.status === "disponible" || data.status === "intercambiado" ? data.status : undefined,
     };
-    
+
     const result = await updateBook(bookId, updateData);
-    
+
     if (result.success) {
       setToast({ message: result.message || "Libro actualizado exitosamente", type: "success" });
-      
+
       // Update the book in the local state
       setBooks((prev) =>
         prev.map((book) =>
           book.id === bookId ? { ...book, ...data } : book
         )
       );
-      
+
       // Update selected book
       if (selectedBook?.id === bookId) {
         setSelectedBook({ ...selectedBook, ...data });
       }
-      
+
       setIsModalOpen(false);
     } else {
       setToast({ message: result.error || "Error al actualizar libro", type: "error" });
@@ -196,6 +197,7 @@ export default function HomePage() {
                   author={book.author}
                   imageUrl={book.imageUrl}
                   genres={book.genres}
+                  ownerUsername={book.ownerUsername}
                   onClick={() => handleBookClick(book)}
                 />
               ))}

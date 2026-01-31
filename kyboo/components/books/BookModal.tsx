@@ -17,6 +17,7 @@ interface Book {
   status: string | null;
   createdAt: Date | null;
   ownerId: string;
+  ownerUsername?: string;
 }
 
 interface BookModalProps {
@@ -123,7 +124,7 @@ export function BookModal({
   const handleSave = async () => {
     if (!onUpdateBook) return;
     setIsSaving(true);
-    
+
     await onUpdateBook(book.id, {
       title: formData.title,
       author: formData.author,
@@ -133,7 +134,7 @@ export function BookModal({
       genres: formData.genres,
       status: formData.status,
     });
-    
+
     setIsSaving(false);
     setIsEditing(false);
   };
@@ -157,11 +158,10 @@ export function BookModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${
-        isAnimating
-          ? "opacity-100"
-          : "opacity-0"
-      }`}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isAnimating
+        ? "opacity-100"
+        : "opacity-0"
+        }`}
       onClick={handleBackdropClick}
       style={{
         backgroundColor: isAnimating ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0)",
@@ -219,11 +219,10 @@ export function BookModal({
               {/* Status Badge */}
               <div className="mt-4">
                 <span
-                  className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${
-                    book.status === "disponible"
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300"
-                  }`}
+                  className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${book.status === "disponible"
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300"
+                    }`}
                 >
                   {book.status === "disponible" ? "📗 Disponible" : "📕 Intercambiado"}
                 </span>
@@ -267,6 +266,22 @@ export function BookModal({
                   <p className="text-gray-700 dark:text-gray-300">{book.author}</p>
                 )}
               </div>
+
+              {/* Owner Username */}
+              {book.ownerUsername && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Publicado por
+                  </label>
+                  <a
+                    href={`/user/${book.ownerUsername}`}
+                    className="text-light-purple dark:text-light-pink hover:underline font-medium"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    @{book.ownerUsername}
+                  </a>
+                </div>
+              )}
 
               {/* Publisher & Year */}
               <div className="grid grid-cols-2 gap-4">
@@ -322,11 +337,10 @@ export function BookModal({
                           key={genre}
                           type="button"
                           onClick={() => toggleGenre(genre)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                            isSelected
-                              ? "bg-light-purple text-white"
-                              : "bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300"
-                          } cursor-pointer hover:scale-105`}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${isSelected
+                            ? "bg-light-purple text-white"
+                            : "bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300"
+                            } cursor-pointer hover:scale-105`}
                         >
                           {genre}
                         </button>
