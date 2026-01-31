@@ -1,0 +1,56 @@
+/* 1. La importación de Google Fonts siempre al principio */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap");
+@import "tailwindcss";
+
+@theme inline {
+  /* 2. Registramos la fuente para que Tailwind cree la utilidad 'font-nunito' */
+  --font-nunito: "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  /* Si quieres que Nunito sea la fuente por defecto de TODO el proyecto (sans) */
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  /* Colores de tu marca */
+  --color-light-purple: #a87bc7;
+  --color-dark-purple: #734a91;
+  --color-light-pink: #f1d7ff;
+  --color-dark-pink: #e0b8ff;
+  --color-yellowed-white: #eeeeee;
+  --color-gray: #808080;
+
+  /* Sincronizamos con tus variables de fondo/texto */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+:root {
+  /* 3. Variables de estado para Light Mode */
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+.dark {
+  /* Variables de estado para Dark Mode */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* Variante de Dark Mode para Tailwind 4 */
+@variant dark (&:where(.dark, .dark *));
+
+/* 4. Estilos Globales */
+* {
+  font-family: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  /* Aplicamos la fuente aquí también para asegurar el renderizado global */
+  font-family: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, textarea, select {
+  font-family: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}

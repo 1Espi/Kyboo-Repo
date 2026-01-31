@@ -1,0 +1,1 @@
+export { simpleRegister } from "./simpleRegister";

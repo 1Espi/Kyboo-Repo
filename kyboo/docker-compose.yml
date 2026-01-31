@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15 # Versión estable y compatible
+    container_name: kyboo-db
+    restart: always
+    environment:
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_password
+      POSTGRES_DB: kyboo_db
+    ports:
+      - "5432:5432" # Mapea el puerto del contenedor al de tu PC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data: # Esto evita que tus datos se borren al apagar el contenedor
