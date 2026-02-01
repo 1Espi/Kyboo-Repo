@@ -10,6 +10,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql", // Drizzle elegirá el mejor método según la URL
   dbCredentials: {
-    url: process.env.POSTGRES_URL!,
+    url: process.env.DATABASE_URL!,
   },
 });

@@ -5,7 +5,7 @@ import * as schema from "./schema";
 
 // Creamos un pool de conexiones
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: process.env.DATABASE_URL,
 });
 
 // Inicializamos Drizzle con el driver de node-postgres
