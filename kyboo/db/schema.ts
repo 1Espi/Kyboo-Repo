@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uuid, index } from "drizzle-orm/pg-core";
 
 // CamelCase en TS, snake_case en DB
 export const users = pgTable("users", {
@@ -29,4 +29,9 @@ export const books = pgTable("books", {
     .default("disponible")
     .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    titleIdx: index("title_idx").on(table.title),
+    authorIdx: index("author_idx").on(table.author),
+  };
 });

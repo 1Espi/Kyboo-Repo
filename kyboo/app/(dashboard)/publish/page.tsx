@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Toast } from "@/components/ui/Toast";
 import { createBookAction } from "@/server/actions/books/createBook";
-import { uploadBookImage } from "@/lib/upload/imageUpload";
 import { BOOK_GENRES } from "@/lib/constants/genres";
 
 export default function PublishBookPage() {
@@ -15,7 +14,6 @@ export default function PublishBookPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -55,28 +53,35 @@ export default function PublishBookPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show preview
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setToast({
+        message: "Tipo de archivo no válido. Solo se permiten JPG, PNG y WebP.",
+        type: "error",
+      });
+      return;
+    }
+
+    // Validate file size
+    const maxSize = 4 * 1024 * 1024; // 4MB
+    if (file.size > maxSize) {
+      setToast({
+        message: "El archivo es demasiado grande. Tamaño máximo: 4MB.",
+        type: "error",
+      });
+      return;
+    }
+
+    // Just show preview, don't upload yet
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-
-    // Upload image
-    setUploadingImage(true);
-    try {
-      const imageUrl = await uploadBookImage(file);
-      setFormData({ ...formData, imageUrl });
-      setToast({ message: "Imagen cargada exitosamente", type: "success" });
-    } catch (error) {
-      setToast({
-        message: error instanceof Error ? error.message : "Error al cargar imagen",
-        type: "error",
-      });
-      setImagePreview(null);
-    } finally {
-      setUploadingImage(false);
-    }
+    
+    // Store the file for later upload
+    setFormData({ ...formData, imageUrl: "pending" });
   };
 
   const toggleGenre = (genre: string) => {
@@ -93,13 +98,22 @@ export default function PublishBookPage() {
     setIsSubmitting(true);
 
     try {
+      // Get the image file from the file input
+      const imageFile = fileInputRef.current?.files?.[0];
+      
+      if (!imageFile) {
+        setToast({ message: "Por favor selecciona una imagen", type: "error" });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Create FormData for the action
       const submitData = new FormData();
       submitData.append("title", formData.title);
       submitData.append("author", formData.author);
       submitData.append("publisher", formData.publisher);
       submitData.append("year", formData.year);
-      submitData.append("imageUrl", formData.imageUrl);
+      submitData.append("image", imageFile); // Send the file, not the URL
       submitData.append("description", formData.description);
       submitData.append("genres", formData.genres.join(","));
 
@@ -118,6 +132,9 @@ export default function PublishBookPage() {
           genres: [],
         });
         setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         // Redirect after delay
         setTimeout(() => {
           router.push("/home");
@@ -173,11 +190,6 @@ export default function PublishBookPage() {
                     <span className="text-xs text-gray-700 dark:text-gray-300">
                       Click para subir
                     </span>
-                  </div>
-                )}
-                {uploadingImage && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="animate-spin text-3xl">⏳</div>
                   </div>
                 )}
               </div>
@@ -309,7 +321,7 @@ export default function PublishBookPage() {
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              disabled={isSubmitting || uploadingImage || !formData.imageUrl || formData.genres.length === 0}
+              disabled={isSubmitting || !imagePreview || formData.genres.length === 0}
               className="flex-1 px-6 py-3 bg-light-purple hover:bg-dark-purple text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Publicando..." : "Publicar libro"}

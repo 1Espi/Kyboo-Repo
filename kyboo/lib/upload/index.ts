@@ -1,1 +1,0 @@
-export { uploadBookImage } from "./imageUpload";

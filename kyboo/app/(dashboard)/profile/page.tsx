@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { ProfileBookCard } from "@/components/profile/ProfileBookCard";
 import { BookModal } from "@/components/books";
@@ -39,8 +39,10 @@ interface Book {
 }
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Book modal state
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -107,13 +110,66 @@ export default function ProfilePage() {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setToast({
+        message: "Tipo de archivo no válido. Solo se permiten JPG, PNG y WebP.",
+        type: "error",
+      });
+      return;
+    }
+
+    // Validate file size
+    const maxSize = 4 * 1024 * 1024; // 4MB
+    if (file.size > maxSize) {
+      setToast({
+        message: "El archivo es demasiado grande. Tamaño máximo: 4MB.",
+        type: "error",
+      });
+      return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const result = await updateUserProfile(formData);
+      // Get image file if selected
+      const imageFile = fileInputRef.current?.files?.[0];
+      
+      // Create FormData
+      const submitData = new FormData();
+      submitData.append("name", formData.name);
+      submitData.append("username", formData.username);
+      submitData.append("preferences", formData.preferences.join(","));
+      
+      if (imageFile) {
+        submitData.append("image", imageFile);
+      }
+
+      const result = await updateUserProfile(submitData);
       if (result.success) {
         setToast({ message: "Perfil actualizado exitosamente", type: "success" });
         setIsEditing(false);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        
+        // Refresh the session to update navbar and other components
+        await updateSession();
+        
         if (session?.user?.id) {
           await loadProfile(session.user.id);
         }
@@ -134,6 +190,10 @@ export default function ProfilePage() {
         username: profile.username,
         preferences: profile.preferences || [],
       });
+    }
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
     setIsEditing(false);
   };
@@ -229,19 +289,38 @@ export default function ProfilePage() {
 
           <div className="space-y-6">
             <div className="bg-gray-50 dark:bg-zinc-800 rounded-2xl p-6 border-2 border-light-purple dark:border-dark-purple">
-              <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="flex flex-col md:flex-row gap-6 items-center">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-900 dark:to-purple-800 flex items-center justify-center relative">
-                    {profile.imageURL ? (
+                  <div
+                    onClick={() => isEditing && isOwner && fileInputRef.current?.click()}
+                    className={`w-40 h-40 rounded-full overflow-hidden bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-900 dark:to-purple-800 flex items-center justify-center relative ${
+                      isEditing && isOwner ? "cursor-pointer hover:opacity-80 transition-opacity" : ""
+                    }`}
+                  >
+                    {imagePreview ? (
+                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    ) : profile.imageURL ? (
                       <Image src={profile.imageURL} alt={profile.name} fill className="object-cover" />
                     ) : (
-                      <span className="text-5xl">👤</span>
+                      <span className="text-6xl">👤</span>
+                    )}
+                    {isEditing && isOwner && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <span className="text-white text-sm font-semibold">Cambiar foto</span>
+                      </div>
                     )}
                   </div>
-                  {isOwner && (
-                    <button disabled className="text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed">
-                      Cambiar foto (próximamente)
-                    </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  {isEditing && isOwner && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-[160px]">
+                      Click en la imagen para cambiar (JPG, PNG, WebP - max 4MB)
+                    </p>
                   )}
                 </div>
 

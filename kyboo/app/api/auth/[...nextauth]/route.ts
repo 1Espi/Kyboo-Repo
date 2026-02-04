@@ -39,21 +39,45 @@ export const authOptions: NextAuthOptions = {
         // 4. Si todo es correcto, devolvemos el objeto de usuario para la sesión
         return {
           id: user.id.toString(),
-          name: user.username,
+          name: user.name,
+          username: user.username,
           image: user.imageURL,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
+    async jwt({ token, user, trigger }) {
+      if (user) {
+        token.id = user.id;
+        // @ts-expect-error username exists on user
+        token.username = user.username;
+        token.picture = user.image;
+      }
+      
+      // Refetch user data when session is updated
+      if (trigger === "update" && token.id) {
+        const [updatedUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, token.id as string))
+          .limit(1);
+        
+        if (updatedUser) {
+          token.name = updatedUser.name;
+          token.username = updatedUser.username;
+          token.picture = updatedUser.imageURL;
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        // @ts-expect-error session.user.id existe
         session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.username = token.username as string;
+        session.user.image = token.picture as string | null;
       }
       return session;
     },

@@ -5,7 +5,9 @@ import { db } from "@/db";
 import { books } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { UTApi } from "uploadthing/server";
+
+const utapi = new UTApi();
 
 export async function createBookAction(formData: FormData) {
   try {
@@ -14,17 +16,38 @@ export async function createBookAction(formData: FormData) {
       return { success: false, error: "No autorizado" };
     }
 
-    // Extracción de datos del FormData
+    // Extract data from FormData
     const title = formData.get("title") as string;
     const author = formData.get("author") as string;
     const publisher = formData.get("publisher") as string;
     const yearRaw = formData.get("year") as string;
     const description = formData.get("description") as string;
-    const imageUrl = formData.get("imageUrl") as string;
+    const imageFile = formData.get("image") as File;
     const genresRaw = formData.get("genres") as string;
 
-    // Procesamiento y Validación
-    // Convertimos la cadena de géneros separada por comas en un Array limpio
+    // Validate required fields
+    if (!title || !author || !description || !imageFile) {
+      return { success: false, error: "Faltan campos requeridos" };
+    }
+
+    // Validate image file
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!validTypes.includes(imageFile.type)) {
+      return { 
+        success: false, 
+        error: "Tipo de archivo no válido. Solo se permiten JPG, PNG y WebP." 
+      };
+    }
+
+    const maxSize = 4 * 1024 * 1024; // 4MB
+    if (imageFile.size > maxSize) {
+      return { 
+        success: false, 
+        error: "El archivo es demasiado grande. Tamaño máximo: 4MB." 
+      };
+    }
+
+    // Process genres
     const genresArray = genresRaw
       ? genresRaw
           .split(",")
@@ -34,27 +57,61 @@ export async function createBookAction(formData: FormData) {
 
     const year = yearRaw ? parseInt(yearRaw, 10) : null;
 
-    // Inserción en DB con Drizzle
-    await db.insert(books).values({
-      id: crypto.randomUUID(), // Generamos UUID para el ID del libro
-      ownerId: user.id,
-      title,
-      author,
-      publisher,
-      year,
-      description,
-      imageUrl,
-      genres: genresArray, // Drizzle maneja la conversión a formato Array de Postgres
-      status: "disponible",
-    });
+    // Upload image to UploadThing
+    let imageUrl: string;
+    try {
+      const uploadResult = await utapi.uploadFiles(imageFile);
+      
+      if (!uploadResult.data || uploadResult.error) {
+        throw new Error(uploadResult.error?.message || "Error al subir la imagen");
+      }
 
-    // Revalidación de Caché
-    // Esto es crucial: le dice a Next.js que purgue la caché de la home page
-    // para que el nuevo libro aparezca sin necesidad de recargar manualmente.
-    revalidatePath("/");
+      imageUrl = uploadResult.data.url;
+    } catch (uploadError) {
+      console.error("Error uploading image:", uploadError);
+      return { 
+        success: false, 
+        error: "Error al subir la imagen. Por favor intenta de nuevo." 
+      };
+    }
 
-    // Redirección o feedback
-    return { success: true };
+    // Insert into database
+    try {
+      await db.insert(books).values({
+        id: crypto.randomUUID(),
+        ownerId: user.id,
+        title,
+        author,
+        publisher,
+        year,
+        description,
+        imageUrl,
+        genres: genresArray,
+        status: "disponible",
+      });
+
+      // Revalidate cache
+      revalidatePath("/");
+      revalidatePath("/home");
+
+      return { success: true };
+    } catch (dbError) {
+      // If database insert fails, try to delete the uploaded image
+      try {
+        const fileKey = imageUrl.split("/").pop();
+        if (fileKey) {
+          await utapi.deleteFiles(fileKey);
+        }
+      } catch (deleteError) {
+        console.error("Failed to cleanup uploaded image:", deleteError);
+      }
+
+      console.error("Error creating book in database:", dbError);
+      return {
+        success: false,
+        error: dbError instanceof Error ? dbError.message : "Error al crear el libro",
+      };
+    }
   } catch (error) {
     console.error("Error al crear libro:", error);
     return {
@@ -63,4 +120,5 @@ export async function createBookAction(formData: FormData) {
     };
   }
 }
+
 
