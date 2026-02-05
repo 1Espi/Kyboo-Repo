@@ -4,14 +4,14 @@ import Link from 'next/link';
 
 // Definición de tipos basada en el esquema de Drizzle
 type Book = {
-  id: number;
+  id: string;
   title: string;
   author: string;
   publisher: string | null;
   year: number | null;
   imageUrl: string;
   description: string;
-  genres: string;
+  genres: string[];
   status: string;
 };
 
